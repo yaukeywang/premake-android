@@ -15,7 +15,7 @@
 	p.ANDROID = "android"
 
 	api.addAllowed("system", p.ANDROID)
-	api.addAllowed("architecture", { "armv5", "armv7", "aarach64", "mips", "mips64" })
+	api.addAllowed("architecture", { "armv5", "armv7", "aarach64", "mips", "mips64", "x86" })
 	api.addAllowed("vectorextensions", { "NEON", "MXU" })
 	api.addAllowed("flags", { "Thumb" })
 
@@ -25,19 +25,21 @@
 		table.insert(sys.allowed, { "android",  "Android" })
 	end
 
-
 --
 -- Register Android properties
 --
 
 	api.register {
-		name = "floatabi",
+		name = "toolchainversion",
 		scope = "config",
 		kind = "string",
 		allowed = {
-			"soft",
-			"softfp",
-			"hard",
+			"gcc 4.6", -- NDK GCC versions
+			"gcc 4.8",
+			"gcc 4.9",
+			"clang 3.4", -- NDK clang versions
+			"clang 3.5",
+			"clang 3.6"
 		},
 	}
 
@@ -48,26 +50,40 @@
 	}
 
 	api.register {
-		name = "toolchainversion",
-		scope = "config",
-		kind = "string",
-		allowed = {
-			"4.6", -- NDK GCC versions
-			"4.8",
-			"4.9",
-			"3.4", -- NDK clang versions
-			"3.5",
-		},
-	}
-
-	api.register {
 		name = "stl",
 		scope = "config",
 		kind = "string",
 		allowed = {
-			"none",
-			"minimal",
-			"stdc++",
-			"stlport",
+			"minimal c++ (system)",
+			"c++ static",
+			"c++ shared",
+			"stlport static",
+			"stlport shared",
+			"gnu stl static",
+			"gnu stl shared",
+			"llvm libc++ static",
+			"llvm libc++ shared"
+		},
+	}
+
+	api.register {
+		name = "thumbmode",
+		scope = "config",
+		kind = "string",
+		allowed = {
+			"thumb",
+			"arm",
+			"disabled"
+		}
+	}
+
+	api.register {
+		name = "floatabi",
+		scope = "config",
+		kind = "string",
+		allowed = {
+			"soft",
+			"softfp",
+			"hard",
 		},
 	}

@@ -22,9 +22,35 @@
 --
 
 	if vstudio.vs2010_architectures ~= nil then
-		vstudio.vs2010_architectures.android = "Android"
+		vstudio.vs2010_architectures.android = "ARM"
 	end
 
+
+--
+-- Extend global properties.
+--
+
+	premake.override(vc2010.elements, "globals", function (oldfn, cfg)
+		local elements = oldfn(cfg)
+		if cfg.system == premake.ANDROID then
+			-- Remove "IgnoreWarnCompileDuplicatedFilename".
+			local pos = table.indexof(elements, vc2010.ignoreWarnDuplicateFilename)
+			table.remove(elements, pos)
+			elements = table.join(elements, {
+				android.androidApplicationType
+			})
+		end
+
+		return elements
+	end)
+
+	function android.androidApplicationType(cfg)
+		_p(2, "<Keyword>Android</Keyword>")
+		_p(2, "<RootNamespace>%s</RootNamespace>", cfg.project.name)
+    	_p(2, "<MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>")
+		_p(2, "<ApplicationType>Android</ApplicationType>")
+		_p(2, "<ApplicationTypeRevision>1.0</ApplicationTypeRevision>")
+	end
 
 --
 -- Extend configurationProperties.
@@ -33,75 +59,110 @@
 	premake.override(vc2010.elements, "configurationProperties", function(oldfn, cfg)
 		local elements = oldfn(cfg)
 		if cfg.kind ~= p.UTILITY and cfg.system == premake.ANDROID then
+			-- Remove "CharacterSet".
+			local pos = table.indexof(elements, vc2010.characterSet)
+			table.remove(elements, pos)
 			elements = table.join(elements, {
 				android.androidAPILevel,
 				android.androidStlType,
+				android.thumbMode
 			})
 		end
 		return elements
 	end)
 
 	function android.androidAPILevel(cfg)
-		if cfg.androidapilevel ~= nil then
-			_p(2,'<AndroidAPILevel>android-%d</AndroidAPILevel>', cfg.androidapilevel)
+		if nil ~= cfg.androidapilevel then
+			_p(2, "<AndroidAPILevel>android-%d</AndroidAPILevel>", cfg.androidapilevel)
 		end
 	end
 
 	function android.androidStlType(cfg)
-		if cfg.stl ~= nil then
-			local static = {
-				none       = "none",
-				minimal    = "system",
-				["stdc++"] = "gnustl_static",
-				stlport    = "stlport_static",
+		if nil ~= cfg.stl then
+			-- local static = {
+			-- 	none       = "none",
+			-- 	minimal    = "system",
+			-- 	["stdc++"] = "gnustl_static",
+			-- 	stlport    = "stlport_static",
+			-- }
+			-- local dynamic = {
+			-- 	none       = "none",
+			-- 	minimal    = "system",
+			-- 	["stdc++"] = "gnustl_dynamic",
+			-- 	stlport    = "stlport_dynamic",
+			-- }
+			-- local stl = iif(cfg.flags.StaticRuntime, static, dynamic);
+			-- _p(2,'<AndroidStlType>%s</AndroidStlType>', stl[cfg.stl])
+
+			local stlType = 
+			{
+				["minimal c++ (system)"] = "system",
+				["c++ static"] = "gabi++_static",
+				["c++ shared"] = "gabi++_shared",
+				["stlport static"] = "stlport_static",
+				["stlport shared"] = "stlport_shared",
+				["gnu stl static"] = "gnustl_static",
+				["gnu stl shared"] = "gnustl_shared",
+				["llvm libc++ static"] = "c++_static",
+				["llvm libc++ shared"] = "c++_shared"
 			}
-			local dynamic = {
-				none       = "none",
-				minimal    = "system",
-				["stdc++"] = "gnustl_dynamic",
-				stlport    = "stlport_dynamic",
+
+			_p(2, "<UseOfStl>%s</UseOfStl>", stlType[cfg.stl])
+		end
+	end
+
+	function android.thumbMode(cfg)
+		if cfg.thumbmode then
+			local thumbMode = 
+			{
+				thumb = "Thumb",
+				arm = "ARM",
+				disabled = "Disabled"
 			}
-			local stl = iif(cfg.flags.StaticRuntime, static, dynamic);
-			_p(2,'<AndroidStlType>%s</AndroidStlType>', stl[cfg.stl])
+
+			_p(2, "<ThumbMode>%s</ThumbMode>", thumbMode[cfg.thumbmode])
 		end
 	end
 
 	-- Note: this function is already patched in by vs2012...
 	premake.override(vc2010, "platformToolset", function(oldfn, cfg)
 		if cfg.system == premake.ANDROID then
-			local archMap = {
-				arm = "armv5te", -- should arm5 be default? vs-android thinks so...
-				arm5 = "armv5te",
-				arm7 = "armv7-a",
-				mips = "mips",
-				x86 = "x86",
-			}
-			local arch = cfg.architecture or "arm"
+			-- local archMap = {
+			-- 	arm = "armv5te", -- should arm5 be default? vs-android thinks so...
+			-- 	armv5 = "armv5te",
+			-- 	armv7 = "armv7-a",
+			-- 	mips = "mips",
+			-- 	x86 = "x86",
+			-- }
+			-- local arch = cfg.architecture or "arm"
 
-			if (cfg.architecture ~= nil or cfg.toolchainversion ~= nil) and archMap[arch] ~= nil then
-				local defaultToolsetMap = {
-					arm = "arm-linux-androideabi-",
-					armv5 = "arm-linux-androideabi-",
-					armv7 = "arm-linux-androideabi-",
-					aarch64 = "aarch64-linux-android-",
-					mips = "mipsel-linux-android-",
-					mips64 = "mips64el-linux-android-",
-					x86 = "x86-",
-					x86_64 = "x86_64-",
-				}
-				local toolset = defaultToolsetMap[arch]
+			if (cfg.architecture ~= nil or cfg.toolchainversion ~= nil) then
+			--if (cfg.architecture ~= nil or cfg.toolchainversion ~= nil) and archMap[arch] ~= nil then
+				-- local defaultToolsetMap = {
+				-- 	arm = "arm-linux-androideabi-",
+				-- 	armv5 = "arm-linux-androideabi-",
+				-- 	armv7 = "arm-linux-androideabi-",
+				-- 	aarch64 = "aarch64-linux-android-",
+				-- 	mips = "mipsel-linux-android-",
+				-- 	mips64 = "mips64el-linux-android-",
+				-- 	x86 = "x86-",
+				-- 	x86_64 = "x86_64-",
+				-- }
+				-- local toolset = defaultToolsetMap[arch]
 
-				if cfg.toolset == "clang" then
-					error("The clang toolset is not yet supported by vs-android", 2)
-					toolset = toolset .. "clang"
-				elseif cfg.toolset and cfg.toolset ~= "gcc" then
-					error("Toolset not supported by the android NDK: " .. cfg.toolset, 2)
-				end
+				-- if cfg.toolset == "clang" then
+				-- 	error("The clang toolset is not yet supported by vs-android", 2)
+				-- 	toolset = toolset .. "clang"
+				-- elseif cfg.toolset and cfg.toolset ~= "gcc" then
+				-- 	error("Toolset not supported by the android NDK: " .. cfg.toolset, 2)
+				-- end
 
-				local version = cfg.toolchainversion or iif(cfg.toolset == "clang", "3.5", "4.9")
+				-- local version = cfg.toolchainversion or iif(cfg.toolset == "clang", "3.5", "4.9")
 
-				_p(2,'<PlatformToolset>%s</PlatformToolset>', toolset .. version)
-				_p(2,'<AndroidArch>%s</AndroidArch>', archMap[arch])
+				-- eg: "gcc 4.9" or "clang 3.6"
+				local _, _, cap, cc, majorv, minorv = string.find(cfg.toolchainversion, "(%a)(%a*)%s*(%d+).(%d+)")
+				_p(2,'<PlatformToolset>%s%s_%s_%s</PlatformToolset>', string.upper(cap), cc, majorv, minorv)
+				--_p(2,'<AndroidArch>%s</AndroidArch>', archMap[arch])
 			end
 		else
 			oldfn(cfg)
@@ -119,7 +180,6 @@
 			elements = table.join(elements, {
 				android.debugInformation,
 				android.strictAliasing,
-				android.thumbMode,
 				android.fpu,
 				android.pic,
 --				android.ShortEnums,
@@ -137,12 +197,6 @@
 	function android.strictAliasing(cfg)
 		if cfg.strictaliasing ~= nil then
 			_p(3,'<StrictAliasing>%s</StrictAliasing>', iif(cfg.strictaliasing == "Off", "false", "true"))
-		end
-	end
-
-	function android.thumbMode(cfg)
-		if cfg.flags.Thumb then
-			_p(3,'<ThumbMode>true</ThumbMode>')
 		end
 	end
 
